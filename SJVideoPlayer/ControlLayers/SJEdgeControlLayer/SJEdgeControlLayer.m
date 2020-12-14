@@ -61,7 +61,9 @@ SJEdgeControlButtonItemTag const SJEdgeControlLayerBottomItem_LIVEText = 30006;
 SJEdgeControlButtonItemTag const SJEdgeControlLayerCenterItem_Replay = 40000;
 
 
-@interface SJEdgeControlLayer ()<SJProgressSliderDelegate>
+@interface SJEdgeControlLayer ()<SJProgressSliderDelegate> {
+    CGSize _previousSize;
+}
 @property (nonatomic, weak, nullable) SJBaseVideoPlayer *videoPlayer;
 
 @property (nonatomic, strong, readonly) SJTimerControl *lockStateTappedTimerControl;
@@ -96,6 +98,16 @@ SJEdgeControlButtonItemTag const SJEdgeControlLayerCenterItem_Replay = 40000;
 
 - (void)dealloc {
     [NSNotificationCenter.defaultCenter removeObserver:self];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if ( !CGSizeEqualToSize(_previousSize, self.bounds.size) ) {
+        if (@available(iOS 11.0, *)) {
+            [self _updateAppearStateForCustomStatusBar];
+        }
+    }
+    _previousSize = self.bounds.size;
 }
 
 #pragma mark -
