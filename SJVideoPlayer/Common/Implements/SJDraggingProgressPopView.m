@@ -139,7 +139,7 @@ NS_ASSUME_NONNULL_BEGIN
     if ( _progressSlider == nil ) {
         _progressSlider = [SJProgressSlider new];
         _progressSlider.trackHeight = 3;
-        _progressSlider.enableBufferProgress = YES;
+        _progressSlider.showsBufferProgress = YES;
         _progressSlider.pan.enabled = NO;
     }
     return _progressSlider;
