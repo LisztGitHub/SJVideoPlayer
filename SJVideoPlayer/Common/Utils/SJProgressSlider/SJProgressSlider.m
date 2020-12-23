@@ -189,7 +189,10 @@ NS_ASSUME_NONNULL_BEGIN
     CGFloat value_old = _value;
     if      ( value_new < _minValue ) value_new = _minValue;
     else if ( value_new > _maxValue ) value_new = _maxValue;
-    if ( _showsStopNode && value_new > _stopNodeLocation * _maxValue ) return;
+    if ( _showsStopNode ) {
+        CGFloat stop = _stopNodeLocation * _maxValue;
+        if ( value_new > stop ) value_new = stop;
+    }
     _value = value_new;
     
     if ( animated ) {
