@@ -160,11 +160,28 @@ NS_ASSUME_NONNULL_BEGIN
 
 /*!
  *  缓冲进度
+ *
+ *  0...1
  */
 @property (nonatomic) CGFloat bufferProgress;
 
 @end
 
+
+#pragma mark - Stop Node
+
+@interface SJProgressSlider (StopNode)
+
+@property (nonatomic) BOOL showsStopNode;
+
+@property (nonatomic, strong, null_resettable) UIView *stopNodeView;
+
+/// 0..1
+@property (nonatomic) CGFloat stopNodeLocation;
+
+- (void)setStopNodeViewCornerRadius:(CGFloat)cornerRadius size:(CGSize)size;
+- (void)setStopNodeViewCornerRadius:(CGFloat)cornerRadius size:(CGSize)size backgroundColor:(UIColor *)backgroundColor;
+@end
 
 
 #pragma mark - Delegate

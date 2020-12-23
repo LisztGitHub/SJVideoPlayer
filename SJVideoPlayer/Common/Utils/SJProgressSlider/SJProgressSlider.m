@@ -40,6 +40,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// prompt
 @property (nonatomic, strong, readonly) UILabel *promptLabel;
 @property (nonatomic) CGFloat promptSpacing;
+
+/// stop node
+@property (nonatomic) BOOL showsStopNode;
+@property (nonatomic, strong, null_resettable) UIView *stopNodeView;
+@property (nonatomic) CGFloat stopNodeLocation;
 @end
 
 #pragma mark -
@@ -184,6 +189,7 @@ NS_ASSUME_NONNULL_BEGIN
     CGFloat value_old = _value;
     if      ( value_new < _minValue ) value_new = _minValue;
     else if ( value_new > _maxValue ) value_new = _maxValue;
+    if ( _showsStopNode && value_new > _stopNodeLocation * _maxValue ) return;
     _value = value_new;
     
     if ( animated ) {
@@ -282,11 +288,12 @@ NS_ASSUME_NONNULL_BEGIN
     CGFloat maxH = self.frame.size.height;
     
     CGFloat containerW = maxW - _expand * 2;
-    CGFloat contaienrH = _trackHeight;
-    _containerView.bounds = (CGRect){0, 0, containerW, contaienrH};
+    CGFloat containerH = _trackHeight;
+    _containerView.bounds = (CGRect){0, 0, containerW, containerH};
     _containerView.center = (CGPoint){maxW * 0.5, maxH * 0.5};
     [self _needUpdateTrackLayout];
-    if ( self.showsBufferProgress ) [self _needUpdateBufferLayout];
+    if ( self.showsBufferProgress ) [self _needUpdateBufferViewLayout];
+    if ( self.showsStopNode ) [self _needUpdateStopNodeViewLayout];
 }
 
 - (void)_needUpdateContainerCornerRadius {
@@ -370,7 +377,7 @@ NS_ASSUME_NONNULL_BEGIN
             [self.containerView insertSubview:bufferView aboveSubview:self.trackImageView];
             bufferView.frame = CGRectMake(0, 0, 0, self.containerView.frame.size.height);
             CGFloat bufferProgress = self.bufferProgress;
-            if ( 0 != bufferProgress ) [self _needUpdateBufferLayout];
+            if ( 0 != bufferProgress ) [self _needUpdateBufferViewLayout];
         }
         else {
             [[self bufferProgressView] removeFromSuperview];
@@ -397,7 +404,7 @@ NS_ASSUME_NONNULL_BEGIN
     if ( bufferProgress < 0 ) bufferProgress = 0;
     else if ( bufferProgress > 1 ) bufferProgress = 1;
     _bufferProgress = bufferProgress;
-    [self _needUpdateBufferLayout];
+    [self _needUpdateBufferViewLayout];
 }
 
 @synthesize bufferProgressView = _bufferProgressView;
@@ -408,9 +415,11 @@ NS_ASSUME_NONNULL_BEGIN
     return _bufferProgressView;
 }
 
-- (void)_needUpdateBufferLayout {
+- (void)_needUpdateBufferViewLayout {
     UIView *bufferView = [self bufferProgressView];
-    CGFloat width = self.bufferProgress * self.containerView.frame.size.width;
+    CGFloat progress = self.bufferProgress;
+    if ( _showsStopNode && progress > _stopNodeLocation ) progress = _stopNodeLocation;
+    CGFloat width = progress * self.containerView.frame.size.width;
     CGRect frame = bufferView.frame;
     frame.size.height = self.containerView.frame.size.height;
     frame.size.width = width;
@@ -471,6 +480,74 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setPromptSpacing:(CGFloat)promptSpacing {
     _promptSpacing = promptSpacing;
     _promptLabelBottomConstraint.constant = -promptSpacing;
+}
+
+#pragma mark - stop node
+
+- (UIView *)stopNodeView {
+    if ( _stopNodeView == nil ) {
+        _stopNodeView = [UIView.alloc initWithFrame:CGRectZero];
+        _stopNodeView.backgroundColor = _trackImageView.backgroundColor;
+        _stopNodeView.clipsToBounds = YES;
+    }
+    return _stopNodeView;
+}
+
+- (void)setShowsStopNode:(BOOL)showsStopNode {
+    if ( showsStopNode != _showsStopNode ) {
+        _showsStopNode = showsStopNode;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ( showsStopNode ) {
+                [self insertSubview:self.stopNodeView belowSubview:self.thumbImageView];
+                [self _needUpdateStopNodeViewLayout];
+            }
+            else {
+                [self->_stopNodeView removeFromSuperview];
+            }
+        });
+    }
+}
+
+- (void)setStopNodeViewCornerRadius:(CGFloat)cornerRadius size:(CGSize)size {
+    [self setStopNodeViewCornerRadius:cornerRadius size:size backgroundColor:_trackImageView.backgroundColor];
+}
+
+- (void)setStopNodeViewCornerRadius:(CGFloat)cornerRadius size:(CGSize)size backgroundColor:(UIColor *)backgroundColor {
+    if ( _showsStopNode ) {
+        self.stopNodeView.layer.cornerRadius = cornerRadius;
+        self.stopNodeView.bounds = (CGRect){0, 0, size};
+        self.stopNodeView.backgroundColor = backgroundColor;
+        [self _needUpdateStopNodeViewLayout];
+    }
+}
+
+- (void)setStopNodeLocation:(CGFloat)stopNodeLocation {
+    if      ( stopNodeLocation > 1 ) stopNodeLocation = 1;
+    else if ( stopNodeLocation < 0 ) stopNodeLocation = 0;
+    
+    if ( stopNodeLocation != _stopNodeLocation ) {
+        _stopNodeLocation = stopNodeLocation;
+        if ( _showsStopNode ) {
+            [self _needUpdateStopNodeViewLayout];
+            [self _needUpdateBufferViewLayout];
+        }
+    }
+}
+
+- (void)_needUpdateStopNodeViewLayout {
+    if ( CGSizeEqualToSize(CGSizeZero, self.bounds.size) )
+        return;
+    
+    if ( CGSizeEqualToSize(CGSizeZero, self.stopNodeView.bounds.size) )
+        return;
+ 
+    CGFloat location = _stopNodeLocation;
+    if ( isnan(location) || isinf(location) ) {
+        location = 0;
+    } 
+    CGFloat centerX = _stopNodeLocation * self.containerView.bounds.size.width + _expand;
+    CGFloat centerY = self.bounds.size.height * 0.5;
+    _stopNodeView.center = CGPointMake(centerX, centerY);
 }
 @end
 NS_ASSUME_NONNULL_END
